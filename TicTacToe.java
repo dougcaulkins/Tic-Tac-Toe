@@ -4,7 +4,11 @@ package Sandbox;
  * Copyright 2010 Douglas B. Caulkins
  * GNU General Public License verbiage?
  */
+import java.awt.GridLayout;
+
+import javax.swing.JButton;
 import javax.swing.JFrame;
+import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 
 /**
@@ -24,15 +28,42 @@ import javax.swing.SwingUtilities;
  * @author Douglas B. Caulkins
  */
 public class TicTacToe {
+	static private final int ROWCOUNT = 3;
+	static private final int COLCOUNT = 3;
 	
 	/**
-	 * Display the introductory dialog, then the dark plain with the menu.
+	 * Empty constructor, for now
+	 */
+	private TicTacToe() {
+	}
+	
+	/**
+	 * Create a panel containing the tic-tac-toe cells
+	 * @return the panel that renders the game
+	 */
+	private JPanel getTicTacToePanel() {
+		final JPanel pnlTicTacToe = new JPanel();
+		/* I'll use a grid layout because it is so easy */
+		final GridLayout cellgrid = new GridLayout(ROWCOUNT, COLCOUNT);
+		pnlTicTacToe.setLayout(cellgrid);
+		/* Populate the panel with nine buttons, just to see how everything looks */
+		for (int i = 0; i < ROWCOUNT; i++)
+			for (int j = 0; j < COLCOUNT; j++) {
+				pnlTicTacToe.add(new JButton("X"));
+			}
+		return pnlTicTacToe;
+	}
+
+	/**
+	 * Display the tic-tac-toe playing board
 	 */
 	static void createAndShowGUI() {
-		JFrame frame = new JFrame();
+		final JFrame frame = new JFrame();
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.setTitle("Tic-Tac-Toe");
-//		frame.add(null);
+		final TicTacToe game = new TicTacToe();
+		final JPanel pnlRenderedGame = game.getTicTacToePanel();
+		frame.add(pnlRenderedGame);
 		frame.pack();
 		frame.setVisible(true);
 	}
