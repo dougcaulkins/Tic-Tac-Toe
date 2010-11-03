@@ -5,6 +5,7 @@ package Sandbox;
  * GNU General Public License verbiage?
  */
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridLayout;
@@ -48,6 +49,7 @@ public class TicTacToe {
 	static private final int ROWCOUNT = 3;
 	static private final int COLCOUNT = 3;
 	static private final Dimension DIMBUTTON = new Dimension(75, 75);
+	static private final int MAXMOVES = 9;
 	
 	static private final String PLAYAGAME = "Would you care to play a game of tic-tac-toe?";
 	static private final String PLAYFIRST = "Do you want the first move?";
@@ -67,12 +69,12 @@ public class TicTacToe {
 	private enum Player {USER, COMPUTER};
 	
 	/* This models the cells and their relationship to each other */
-	private final Cell[][] arrCell;
-	// !!! Suggests simplification here...
-	private final CellButton[][] arrButton;
+	private final CellButton[][] arrCell;
+	
+	private final Triplet[] arrTriplet;
 	
 	/* This current state of the game.  */
-	private GameState state = GameState.START;
+	private GameState stateGame = GameState.START;
 	
 	/* The current player */
 	private Player currentPlayer;
@@ -85,17 +87,34 @@ public class TicTacToe {
 	
 	private int moveCount;
 	
+	private boolean xwon = false;
+	private boolean owon = false;
+	
+	private final Color origBackground;
+	
 	/**
 	 * Constructor
 	 */
 	private TicTacToe() {
 		/* Initialize the array of cells */
-		arrCell = new Cell[ROWCOUNT][COLCOUNT];
+		arrCell = new CellButton[ROWCOUNT][COLCOUNT];
 		for (int i = 0; i < ROWCOUNT; i++)
 			for (int j = 0; j < COLCOUNT; j++) {
-				arrCell[i][j] = new Cell();
+				arrCell[i][j] = new CellButton();
 			}
-		arrButton = new CellButton[ROWCOUNT][COLCOUNT];
+		origBackground = arrCell[0][0].getBackground();
+		arrTriplet = new Triplet[8];
+		/* Rows */
+		arrTriplet[0] = new Triplet(arrCell[0][0], arrCell[0][1], arrCell[0][2]);
+		arrTriplet[1] = new Triplet(arrCell[1][0], arrCell[1][1], arrCell[1][2]);
+		arrTriplet[2] = new Triplet(arrCell[2][0], arrCell[2][1], arrCell[2][2]);
+		/* Columns */
+		arrTriplet[3] = new Triplet(arrCell[0][0], arrCell[1][0], arrCell[2][0]);
+		arrTriplet[4] = new Triplet(arrCell[0][1], arrCell[1][1], arrCell[2][1]);
+		arrTriplet[5] = new Triplet(arrCell[0][2], arrCell[1][2], arrCell[2][2]);
+		/* Diagonals */
+		arrTriplet[6] = new Triplet(arrCell[0][0], arrCell[1][1], arrCell[2][2]);
+		arrTriplet[7] = new Triplet(arrCell[0][2], arrCell[1][1], arrCell[2][0]);
 		
 		/* Initialize the components used to converse with the user */
 		btnYes = new JButton("Yes");
@@ -138,12 +157,9 @@ public class TicTacToe {
 		final GridLayout cellgrid = new GridLayout(ROWCOUNT, COLCOUNT);
 		pnlTicTacToe.setLayout(cellgrid);
 		/* Populate the panel with nine buttons */
-		CellButton btnCell;
 		for (int i = 0; i < ROWCOUNT; i++)
 			for (int j = 0; j < COLCOUNT; j++) {
-				btnCell = new CellButton(arrCell[i][j]);
-				pnlTicTacToe.add(btnCell);
-				arrButton[i][j] = btnCell;
+				pnlTicTacToe.add(arrCell[i][j]);
 			}
 		return pnlTicTacToe;
 	}
@@ -151,10 +167,65 @@ public class TicTacToe {
 	private void enableCellButtons() {
 		for (int i = 0; i < ROWCOUNT; i++)
 			for (int j = 0; j < COLCOUNT; j++) {
-				arrButton[i][j].setEnabled(true);
-				arrButton[i][j].setText("");
+				arrCell[i][j].setEnabled(true);
+				arrCell[i][j].setText("");
 				arrCell[i][j].setState(CellState.NULL);
+				arrCell[i][j].setBackground(origBackground);
 			}
+	}
+
+	private void disableCellButtons() {
+		for (int i = 0; i < ROWCOUNT; i++)
+			for (int j = 0; j < COLCOUNT; j++) {
+				arrCell[i][j].setEnabled(false);
+			}
+	}
+	
+	private class Triplet {
+		private CellButton[] arrCell;
+		
+		private Triplet(CellButton cell1, CellButton cell2, CellButton cell3) {
+			arrCell = new CellButton[ROWCOUNT];
+			arrCell[0] = cell1;
+			arrCell[1] = cell2;
+			arrCell[2] = cell3;
+		}
+		
+		private boolean isXWin() {
+			int xcount = 0;
+			boolean xwin = false;
+			for (CellButton cell: arrCell) {
+				if (cell.getState() == CellState.X) {
+					xcount++;
+				}
+			}
+			xwin = (xcount == ROWCOUNT);
+			if (xwin) {
+				for (CellButton cell: arrCell) {
+					cell.setBackground(Color.GREEN);
+				}				
+			}
+			
+			return xwin;
+		}
+		
+		private boolean isOWin() {
+			int ocount = 0;
+			boolean ywin = false;
+			for (CellButton cell: arrCell) {
+				if (cell.getState() == CellState.O) {
+					ocount++;
+				}
+			}
+			ywin = (ocount == ROWCOUNT);
+			if (ywin) {
+				for (CellButton cell: arrCell) {
+					cell.setBackground(Color.GREEN);
+				}				
+			}
+
+			return ywin;
+		}
 	}
 
 	private class YesActionListener implements ActionListener {
@@ -163,17 +234,19 @@ public class TicTacToe {
 		 */
 		@Override
 		public void actionPerformed(ActionEvent arg0) {
-			switch (state) {
+			switch (stateGame) {
 			/* Set up to ask the user to start first or not */
 			case START:
+			case AGAIN:
 				txtLine.setText(PLAYFIRST);
-				state = GameState.FIRSTCHOICE;
+				stateGame = GameState.FIRSTCHOICE;
+				xwon = false;
+				owon = false;
 				break;
 			/* The user has the first move */
 			case FIRSTCHOICE:
-			case AGAIN:
 				txtLine.setText(YOUAREX);
-				state = GameState.INPROGRESS;
+				stateGame = GameState.INPROGRESS;
 				btnYes.setVisible(false);
 				btnNo.setVisible(false);
 				btnOkay.setVisible(true);
@@ -192,7 +265,7 @@ public class TicTacToe {
 		 */
 		@Override
 		public void actionPerformed(ActionEvent arg0) {
-			switch (state) {
+			switch (stateGame) {
 			/* The user doesn't want to play any more */
 			case START:
 			case AGAIN:
@@ -202,7 +275,7 @@ public class TicTacToe {
 			/* The computer has the first move */
 			case FIRSTCHOICE: 
 				txtLine.setText(YOUAREO);
-				state = GameState.INPROGRESS;
+				stateGame = GameState.INPROGRESS;
 				btnYes.setVisible(false);
 				btnNo.setVisible(false);
 				btnOkay.setVisible(true);
@@ -221,47 +294,29 @@ public class TicTacToe {
 		 */
 		@Override
 		public void actionPerformed(ActionEvent arg0) {
-			switch (state) {
+			switch (stateGame) {
 			case DONE: 
 				txtLine.setText(PLAYAGAIN);
 				btnYes.setVisible(true);
 				btnNo.setVisible(true);
 				btnOkay.setVisible(false);
-				state = GameState.AGAIN;
+				stateGame = GameState.AGAIN;
 				break;
 			}
 		}
 	}
 
-	/* This class contains the state of a particular cell */
-	private class Cell {
-		private CellState state;
-
-		private Cell() {	
-			state = CellState.NULL;
-		}
-		
-		private void setState(CellState newState) {
-			state = newState;
-		}
-		
-		private CellState getState() {
-			return state;
-		}
-	}
-
 	private class CellButton extends JButton
 	{
-		/* The cell associated with this particular button */
-		private Cell cell;
+		private CellState stateCell;
 		
 		/**
 		 * The constructor
 		 */
-		private CellButton(Cell pcell) {
+		private CellButton() {
 			super();
 			
-			cell = pcell;
+			stateCell = CellState.NULL;
 			/* Make the button a nice square */
 			setPreferredSize(DIMBUTTON);
 			setFont(new Font("sansserif", Font.BOLD, 50));
@@ -272,27 +327,58 @@ public class TicTacToe {
 				public void actionPerformed(ActionEvent arg0) {
 					/* !!! revisit when the player to move first is a choice */
 					if (TicTacToe.this.currentPlayer == Player.USER) {
-						cell.setState(CellState.X);
+						stateCell = CellState.X;
 						CellButton.this.setText(CellState.X.name());
 						TicTacToe.this.currentPlayer = Player.COMPUTER;
 					} else {
-						cell.setState(CellState.O);
+						stateCell = CellState.O;
 						CellButton.this.setText(CellState.O.name());
 						TicTacToe.this.currentPlayer = Player.USER;
 					}
 					/* Disable the button so it can't be clicked on again */
 					CellButton.this.setEnabled(false);
 					
+					for (Triplet triple : arrTriplet) {
+						if (triple.isXWin()) {
+							xwon = true;
+							stateGame = GameState.DONE;
+							txtLine.setText(IWIN);
+							btnOkay.setEnabled(true);
+							disableCellButtons();
+						} else if (triple.isOWin()) {
+							owon = true;
+							stateGame = GameState.DONE;
+							txtLine.setText(IWIN);
+							btnOkay.setEnabled(true);
+							disableCellButtons();
+						}
+					}
+
 					/* Count the number of moves */
 					moveCount++;
-					if (moveCount >= 9) {
+					if (moveCount >= MAXMOVES) {
 						/* All the cells are filled - game over */
-						state = GameState.DONE;
+						stateGame = GameState.DONE;
 						txtLine.setText(DRAW);
 						btnOkay.setEnabled(true);
 					}
 				}});
 		}		
+		
+		private void setState(CellState newState) {
+			stateCell = newState;
+		}
+		
+		private CellState getState() {
+			return stateCell;
+		}
+
+		/* This class contains the state of a particular cell */
+		private class Cell {
+
+			private Cell() {	
+			}
+		}
 	}
 
 	/**
