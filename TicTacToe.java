@@ -179,12 +179,18 @@ public class TicTacToe {
 		if (btnCell == null) {
 			for (Triplet triple : arrTriplet) {
 				btnCell = triple.getEmptyCell(computerMarker);
+				if (btnCell != null) {
+					break;
+				}
 			}
 		}
 		/* Else look for any blocking move and make that move */
 		if (btnCell == null) {
 			for (Triplet triple : arrTriplet) {
 				btnCell = triple.getEmptyCell(userMarker);
+				if (btnCell != null) {
+					break;
+				}
 			}
 		}
 		/* Else (for now) just go to a random cell */
@@ -199,7 +205,9 @@ public class TicTacToe {
 				}
 		}		
 		
-		btnCell.doClick();		
+		if (btnCell != null) {
+			btnCell.doClick();
+		}
 	}
 	
 
@@ -207,10 +215,7 @@ public class TicTacToe {
 	private void enableCellButtons() {
 		for (int i = 0; i < ROWCOUNT; i++)
 			for (int j = 0; j < COLCOUNT; j++) {
-				arrCell[i][j].setEnabled(true);
-				arrCell[i][j].setText("");
-				arrCell[i][j].setState(CellState.NULL);
-				arrCell[i][j].setBackground(origBackground);
+				arrCell[i][j].clear();
 			}
 	}
 
@@ -400,12 +405,9 @@ public class TicTacToe {
 					if (TicTacToe.this.currentPlayer == Player.USER) {
 						stateCell = userMarker;
 						CellButton.this.setText(userMarker.name());
-						TicTacToe.this.currentPlayer = Player.COMPUTER;
-						takeTurn();
 					} else {
 						stateCell = computerMarker;
 						CellButton.this.setText(computerMarker.name());
-						TicTacToe.this.currentPlayer = Player.USER;
 					}
 					/* Disable the button so it can't be clicked on again */
 					CellButton.this.setEnabled(false);
@@ -434,6 +436,18 @@ public class TicTacToe {
 						txtLine.setText(DRAW);
 						btnOkay.setEnabled(true);
 					}
+					if (TicTacToe.this.currentPlayer == Player.USER) {
+						TicTacToe.this.currentPlayer = Player.COMPUTER;
+//						SwingUtilities.invokeLater(new Runnable() 
+//						{
+//							@Override
+//							public void run() {
+								takeTurn();								
+//							}							
+//						});
+					} else {
+						TicTacToe.this.currentPlayer = Player.USER;
+					}
 				}});
 		}		
 		
@@ -444,12 +458,13 @@ public class TicTacToe {
 		private CellState getState() {
 			return stateCell;
 		}
+		
+		private void clear() {
+			setEnabled(true);
+			setText("");
+			setState(CellState.NULL);
+			setBackground(origBackground);
 
-		/* This class contains the state of a particular cell */
-		private class Cell {
-
-			private Cell() {	
-			}
 		}
 	}
 
