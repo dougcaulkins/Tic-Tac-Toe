@@ -78,6 +78,8 @@ public class TicTacToe {
 	
 	/* The current player */
 	private Player currentPlayer;
+	private CellState computerMarker;
+	private CellState userMarker;
 
 	/* The buttons and text line used to converse with the user */
 	private final JButton btnYes;
@@ -130,7 +132,7 @@ public class TicTacToe {
 	
 	/**
 	 * This panel displays the conversation with the user 
-	 * @return the patter panel
+	 * @return the conversation panel
 	 */
 	private JPanel getConversationPanel() {
 		final JPanel pnlConversation = new JPanel();
@@ -163,7 +165,45 @@ public class TicTacToe {
 			}
 		return pnlTicTacToe;
 	}
+	
+	/**
+	 * The computer calculates what cell to mark
+	 */
+	private void takeTurn() {
+		CellButton btnCell = null;
+		/* If this is the first move, just always take the upper left hand corner */
+		if (moveCount == 0) {
+			btnCell = arrCell[0][0];
+		}
+		/* Else look for any winning move and make that move */
+		if (btnCell == null) {
+			for (Triplet triple : arrTriplet) {
+				btnCell = triple.getEmptyCell(computerMarker);
+			}
+		}
+		/* Else look for any blocking move and make that move */
+		if (btnCell == null) {
+			for (Triplet triple : arrTriplet) {
+				btnCell = triple.getEmptyCell(userMarker);
+			}
+		}
+		/* Else (for now) just go to a random cell */
+		if (btnCell == null) {
+			out:
+			for (int i = 0; i < ROWCOUNT; i++)
+				for (int j = 0; j < COLCOUNT; j++) {
+					if (arrCell[i][j].getState() == CellState.NULL) {
+						btnCell = arrCell[i][j];
+						break out;
+					}
+				}
+		}		
+		
+		btnCell.doClick();		
+	}
+	
 
+	/* Enable and clear the cell buttons */
 	private void enableCellButtons() {
 		for (int i = 0; i < ROWCOUNT; i++)
 			for (int j = 0; j < COLCOUNT; j++) {
@@ -174,6 +214,7 @@ public class TicTacToe {
 			}
 	}
 
+	/* Disable the cell buttons */
 	private void disableCellButtons() {
 		for (int i = 0; i < ROWCOUNT; i++)
 			for (int j = 0; j < COLCOUNT; j++) {
@@ -181,6 +222,9 @@ public class TicTacToe {
 			}
 	}
 	
+	/*
+	 * This class is a view of three cells that, if all the same, indicate a win
+	 */
 	private class Triplet {
 		private CellButton[] arrCell;
 		
@@ -191,40 +235,60 @@ public class TicTacToe {
 			arrCell[2] = cell3;
 		}
 		
+		/**
+		 * Determine if O has won
+		 * @return true if O has won
+		 */
+		private boolean isOWin() {
+			return isWin(CellState.O);
+		}
+		
+		/**
+		 * Determine if X has won
+		 * @return true if X has won
+		 */
 		private boolean isXWin() {
-			int xcount = 0;
-			boolean xwin = false;
+			return isWin(CellState.X);
+		}
+		
+		/**
+		 * Determine if the player of this type has won
+		 * @param stateCell the type
+		 * @return true if the player has won
+		 */
+		private boolean isWin(CellState stateCell) {
+			int count = 0;
+			boolean win = false;
 			for (CellButton cell: arrCell) {
-				if (cell.getState() == CellState.X) {
-					xcount++;
+				if (cell.getState() == stateCell) {
+					count++;
 				}
 			}
-			xwin = (xcount == ROWCOUNT);
-			if (xwin) {
+			win = (count == ROWCOUNT);
+			if (win) {
 				for (CellButton cell: arrCell) {
 					cell.setBackground(Color.GREEN);
 				}				
 			}
 			
-			return xwin;
+			return win;
 		}
 		
-		private boolean isOWin() {
-			int ocount = 0;
-			boolean ywin = false;
+		private CellButton getEmptyCell(CellState stateCell) {
+			int count = 0;
+			CellButton nullCell = null;
 			for (CellButton cell: arrCell) {
-				if (cell.getState() == CellState.O) {
-					ocount++;
+				if (cell.getState() == stateCell) {
+					count++;
+				}
+				if (cell.getState() == CellState.NULL) {
+					nullCell = cell;
 				}
 			}
-			ywin = (ocount == ROWCOUNT);
-			if (ywin) {
-				for (CellButton cell: arrCell) {
-					cell.setBackground(Color.GREEN);
-				}				
+			if (count != 2) {
+				nullCell = null;
 			}
-
-			return ywin;
+			return nullCell;
 		}
 	}
 
@@ -253,6 +317,9 @@ public class TicTacToe {
 				btnOkay.setEnabled(false);
 				/* No moves have been made yet */
 				moveCount = 0;
+				userMarker = CellState.X;
+				computerMarker = CellState.O;
+				currentPlayer = Player.USER;
 				enableCellButtons();
 				break;
 			}
@@ -282,7 +349,11 @@ public class TicTacToe {
 				btnOkay.setEnabled(false);
 				/* No moves have been made yet */
 				moveCount = 0;
+				userMarker = CellState.O;
+				computerMarker = CellState.X;
 				enableCellButtons();
+				currentPlayer = Player.COMPUTER;
+				takeTurn();
 				break;
 			}
 		}
@@ -327,12 +398,13 @@ public class TicTacToe {
 				public void actionPerformed(ActionEvent arg0) {
 					/* !!! revisit when the player to move first is a choice */
 					if (TicTacToe.this.currentPlayer == Player.USER) {
-						stateCell = CellState.X;
-						CellButton.this.setText(CellState.X.name());
+						stateCell = userMarker;
+						CellButton.this.setText(userMarker.name());
 						TicTacToe.this.currentPlayer = Player.COMPUTER;
+						takeTurn();
 					} else {
-						stateCell = CellState.O;
-						CellButton.this.setText(CellState.O.name());
+						stateCell = computerMarker;
+						CellButton.this.setText(computerMarker.name());
 						TicTacToe.this.currentPlayer = Player.USER;
 					}
 					/* Disable the button so it can't be clicked on again */
