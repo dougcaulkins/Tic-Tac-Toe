@@ -19,29 +19,25 @@ import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 
 /**
- * This application plays a game of tic-tac-toe with the user and never looses.
+ * This application plays a game of tic-tac-toe with the user and often doesn't loose. I made a bad call
+ * and spent way too much time on presentation and not enough time on implementing the core requirement:
+ * a computer player that never looses. I've run out of time now...
  * 
  * Given the uncertainly of my schedule at Turner and the possibility of some very long, late days, 
  * I have only a limited amount of time to complete this test. I'll use Java and Swing since they are the
- * tools with which I'm most comfortable. If I have time, I may attempt to port the code to Python.
+ * tools with which I'm most comfortable.
  * 
  * I'll use the model-view-controller design pattern. The model is the state of the nine tic-tac-toe
  * cells. The view is how I render those cells. The controller will respond to user input, determine
  * when a game is done, etc.
  * 
- * I'll work on the view first, an 3x3 array of buttons. This is not pretty, but it is functional. If
- * I have time later I may decide to improve the rendering.
- * 
  * Improvements
  * - Center the frame on the screen
- * - Friendly dialog - "Would you care to play a game of tic-tac-toe" "Do you want the first move" "You win" 
- *    "I win" "Would you care to play again?"
  * - A help explaining the rules of the game?
- * - Render the background of a winning row or diagonal in a different color
- * - X goes first
  * - Short circuit dialog if the user clicks on a cell?
  * - Unit tests
  * - It would be amusing and doable to pit the computer against itself as a unit test
+ * - Reorganize and some refactoriing - it's too difficult to follow as is
  * 
  * @author Douglas B. Caulkins
  */
@@ -56,6 +52,7 @@ public class TicTacToe {
 	static private final String YOUAREX = "You are \"X\"";
 	static private final String YOUAREO = "You are \"O\"";
 	static private final String IWIN = "I win!";
+	static private final String YOUWIN = "You win!";
 	static private final String DRAW = "It's a draw.";
 	static private final String PLAYAGAIN = "Would you care to play again?";
 	
@@ -175,6 +172,26 @@ public class TicTacToe {
 		if (moveCount == 0) {
 			btnCell = arrCell[0][0];
 		}
+		/* If this is the second move then */
+		if (moveCount == 1) {
+			/* If the first move was the center, choose the upper left hand corner */
+			if (arrCell[1][1].getState() != CellState.NULL) {
+				btnCell = arrCell[0][0];
+			/* Otherwise, choose the center */
+			} else {
+				btnCell = arrCell[1][1];
+			}
+		}
+		/* If this is the third move then set up for a fork */
+		if (moveCount == 2) {
+			/* If the users move was not in the lower right hand corner */
+			if (arrCell[2][2].getState() == CellState.NULL) {
+				btnCell = arrCell[2][2];
+			/* Otherwise, choose the lower left hand corner */
+			} else {
+				btnCell = arrCell[2][0];
+			}
+		}
 		/* Else look for any winning move and make that move */
 		if (btnCell == null) {
 			for (Triplet triple : arrTriplet) {
@@ -184,7 +201,7 @@ public class TicTacToe {
 				}
 			}
 		}
-		/* Else look for any blocking move and make that move */
+		/* Else look for any move to block and make that move */
 		if (btnCell == null) {
 			for (Triplet triple : arrTriplet) {
 				btnCell = triple.getEmptyCell(userMarker);
@@ -193,6 +210,32 @@ public class TicTacToe {
 				}
 			}
 		}
+		/* If this is the fourth move then set up for a fork */
+		if ((btnCell == null) && (moveCount == 3)) {
+			/* If the users move was not in the lower right hand corner */
+			if (arrCell[2][2].getState() == CellState.NULL) {
+				btnCell = arrCell[2][2];
+			/* Otherwise, choose the lower left hand corner */
+			} else {
+				btnCell = arrCell[2][0];
+			}
+		}
+		
+		/* If this is the sixth move, make the fork */
+		if ((btnCell == null) && (moveCount == 5)) {
+			if (arrCell[2][2].getState() == computerMarker) {
+				if (arrCell[2][0].getState() == CellState.NULL) {
+					btnCell = arrCell[2][0];
+				} else if (arrCell[0][2].getState() == CellState.NULL) {
+					btnCell = arrCell[0][2];
+				}
+			} else if (arrCell[2][0].getState() == computerMarker) {
+				if (arrCell[0][2].getState() == CellState.NULL) {
+					btnCell = arrCell[0][2];
+				}
+			}
+		}
+		
 		/* Else (for now) just go to a random cell */
 		if (btnCell == null) {
 			out:
@@ -416,13 +459,21 @@ public class TicTacToe {
 						if (triple.isXWin()) {
 							xwon = true;
 							stateGame = GameState.DONE;
-							txtLine.setText(IWIN);
+							if (computerMarker == CellState.X) {
+								txtLine.setText(IWIN);
+							} else {
+								txtLine.setText(YOUWIN);
+							}
 							btnOkay.setEnabled(true);
 							disableCellButtons();
 						} else if (triple.isOWin()) {
 							owon = true;
 							stateGame = GameState.DONE;
-							txtLine.setText(IWIN);
+							if (computerMarker == CellState.O) {
+								txtLine.setText(YOUWIN);
+							} else {
+								txtLine.setText(IWIN);
+							}
 							btnOkay.setEnabled(true);
 							disableCellButtons();
 						}
@@ -438,13 +489,7 @@ public class TicTacToe {
 					}
 					if (TicTacToe.this.currentPlayer == Player.USER) {
 						TicTacToe.this.currentPlayer = Player.COMPUTER;
-//						SwingUtilities.invokeLater(new Runnable() 
-//						{
-//							@Override
-//							public void run() {
-								takeTurn();								
-//							}							
-//						});
+						takeTurn();								
 					} else {
 						TicTacToe.this.currentPlayer = Player.USER;
 					}
@@ -464,7 +509,6 @@ public class TicTacToe {
 			setText("");
 			setState(CellState.NULL);
 			setBackground(origBackground);
-
 		}
 	}
 
